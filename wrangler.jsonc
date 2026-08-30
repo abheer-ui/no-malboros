@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "smokingk",
+  "compatibility_date": "2026-08-28",
+  "observability": {
+    "enabled": true
+  },
+  // Only ./public is uploaded. This matters: the build runs `npm install`,
+  // which creates a node_modules/ containing a 146 MiB workerd binary. Pointing
+  // assets at the repo root swept that in and blew the 25 MiB per-asset limit.
+  // Keeping the site in its own directory makes that impossible by structure
+  // rather than by an ignore rule someone has to remember to update.
+  "assets": {
+    "directory": "./public"
+  }
+}
