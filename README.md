@@ -1,5 +1,7 @@
 # No Malboros
 
+*Time to control your urge.*
+
 A calm, private place to get through the moment a craving hits.
 
 Two experiences carry the whole product:
