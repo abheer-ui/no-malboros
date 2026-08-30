@@ -1,0 +1,23 @@
+{
+  "name": "no-malboros",
+  "version": "2.0.0",
+  "private": true,
+  "description": "A calm, private place to ride out a craving — box breathing and urge delay.",
+  "main": "index.html",
+  "scripts": {
+    "dev": "serve . -l 3100",
+    "start": "serve . -l 3100"
+  },
+  "keywords": [
+    "quit-smoking",
+    "box-breathing",
+    "urge-delay",
+    "health"
+  ],
+  "author": "",
+  "license": "MIT",
+  "//": "No build step and no runtime dependencies — this is a static site. `serve` is only used for local development, so it must stay a devDependency: a host running `npm install --production` should install nothing at all.",
+  "devDependencies": {
+    "serve": "^14.2.4"
+  }
+}

@@ -1,0 +1,27 @@
+# Understood by both Cloudflare Pages and Netlify.
+#
+# The CSP is deliberately strict: this app makes no network calls at all, so
+# it can forbid every outbound connection. If a backend is added later for
+# gift-card payouts, `connect-src` is the only line that needs to change.
+
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; form-action 'none'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  X-Frame-Options: DENY
+  Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=(), interest-cohort=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+# Hashed-by-content assets could be cached forever, but these filenames are
+# stable, so revalidate instead of serving a stale app after a deploy.
+/js/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/styles/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/icon.svg
+  Cache-Control: public, max-age=604800

@@ -1,0 +1,3 @@
+# No Malboros holds personal health data. Nothing here should be indexed.
+User-agent: *
+Disallow: /

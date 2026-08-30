@@ -1,0 +1,20 @@
+{
+  "name": "No Malboros",
+  "short_name": "No Malboros",
+  "description": "A calm, private place to ride out a craving — box breathing and urge delay.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0A1211",
+  "theme_color": "#0A1211",
+  "categories": ["health", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    }
+  ]
+}

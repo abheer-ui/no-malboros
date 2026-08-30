@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>No Malboros — a calm place to ride out an urge</title>
+  <meta name="description"
+    content="Box breathing and urge delay. A quiet, private tool for getting through the moment a craving hits.">
+  <meta name="theme-color" content="#0A1211" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#F4F7F6" media="(prefers-color-scheme: light)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="No Malboros">
+
+  <!-- This app holds sensitive personal health data and should never be
+       indexed or previewed by crawlers. -->
+  <meta name="robots" content="noindex, nofollow">
+
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="manifest" href="manifest.webmanifest">
+
+  <link rel="stylesheet" href="styles/tokens.css">
+  <link rel="stylesheet" href="styles/app.css">
+</head>
+
+<body>
+  <div class="ambient" aria-hidden="true"></div>
+
+  <!-- ══ SPLASH ════════════════════════════════════════════════════════
+       One quiet breath, then out of the way. Under a second, skippable by
+       tapping, and instant for anyone who has asked for reduced motion —
+       this app gets opened mid-craving and must never make someone wait. -->
+  <div class="splash" id="splash" aria-hidden="true">
+    <span class="splash__mark" data-icon="lungs" data-icon-size="46"></span>
+    <p class="splash__word">No Malboros</p>
+  </div>
+
+  <!-- ══ HOME ══════════════════════════════════════════════════════════ -->
+  <main class="view is-active" id="view-home">
+    <header class="topbar">
+      <div class="wordmark">
+        <span class="wordmark__mark" data-icon="lungs" data-icon-size="22"></span>
+        <span class="wordmark__text">No Malboros</span>
+      </div>
+      <div class="topbar__actions">
+        <button class="icon-btn" data-go="learn" aria-label="Learn about smoking">
+          <span data-icon="learn" data-icon-size="20"></span>
+        </button>
+        <button class="icon-btn" data-go="progress" aria-label="Your progress">
+          <span data-icon="progress" data-icon-size="20"></span>
+        </button>
+        <button class="icon-btn" data-go="settings" aria-label="Settings">
+          <span data-icon="settings" data-icon-size="20"></span>
+        </button>
+      </div>
+    </header>
+
+    <div class="page">
+      <section class="hero">
+        <h1 class="hero__title" id="hero-title">Here when you need a moment.</h1>
+        <p class="hero__sub" id="hero-sub">Two ways through. Pick either one.</p>
+      </section>
+
+      <div class="actions">
+        <button class="action action--breathe" data-go="breathe">
+          <span class="action__icon" data-icon="lungs" data-icon-size="28"></span>
+          <span class="action__body">
+            <span class="action__title">Breathe</span>
+            <span class="action__sub">Box breathing · 4 seconds a side</span>
+          </span>
+        </button>
+
+        <button class="action action--delay" data-go="delay">
+          <span class="action__icon" data-icon="wave" data-icon-size="28"></span>
+          <span class="action__body">
+            <span class="action__title">Delay an urge</span>
+            <span class="action__sub">Ride it out · <span id="delay-default-label">5 minutes</span></span>
+          </span>
+        </button>
+      </div>
+
+      <section class="stats" aria-label="Today">
+        <div class="stat">
+          <p class="stat__value" id="stat-energy">100</p>
+          <p class="stat__label">Energy</p>
+          <span class="energy" id="energy-bar" role="progressbar"
+                aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"
+                aria-label="Health energy">
+            <span class="energy__fill" id="energy-fill"></span>
+          </span>
+        </div>
+        <div class="stat">
+          <p class="stat__value" id="stat-smoked">0</p>
+          <p class="stat__label" id="stat-smoked-label">of 10 today</p>
+        </div>
+        <div class="stat">
+          <p class="stat__value" id="stat-saved">₹0</p>
+          <p class="stat__label">Not spent</p>
+        </div>
+      </section>
+
+      <button class="token-row" data-go="rewards">
+        <span class="token-row__mark" data-icon="token" data-icon-size="18"></span>
+        <span class="token-row__text">
+          <strong id="token-row-count">0</strong> Tokens
+          <span class="token-row__rupees" id="token-row-rupees">≈ ₹0</span>
+        </span>
+        <span class="token-row__chev" data-icon="chevron" data-icon-size="16"></span>
+      </button>
+
+      <p class="since" id="since"></p>
+      <p class="home-note" id="home-note"></p>
+
+      <button class="quiet-btn" id="btn-log-smoke">
+        <span data-icon="cigarette" data-icon-size="18"></span>
+        <span>I smoked one</span>
+      </button>
+    </div>
+  </main>
+
+  <!-- ══ BREATHE ═══════════════════════════════════════════════════════ -->
+  <section class="view view--immersive" id="view-breathe" aria-label="Box breathing">
+    <header class="session-bar">
+      <button class="icon-btn" id="breathe-back" data-go="home" aria-label="Back">
+        <span data-icon="back" data-icon-size="20"></span>
+      </button>
+      <p class="session-bar__title" id="breathe-meta">Box breathing</p>
+      <span class="icon-btn is-ghost" aria-hidden="true"></span>
+    </header>
+
+    <div class="session-body" id="breathe-mount"></div>
+
+    <p class="sr-only" id="breathe-live" role="status" aria-live="polite"></p>
+
+    <footer class="session-foot">
+      <div class="chips" id="breathe-chips" role="group" aria-label="Session length">
+        <button class="chip is-active" data-limit="0">Untimed</button>
+        <button class="chip" data-limit="60">1 min</button>
+        <button class="chip" data-limit="180">3 min</button>
+        <button class="chip" data-limit="300">5 min</button>
+      </div>
+      <div class="controls">
+        <button class="btn btn--ghost" id="breathe-stop" hidden>
+          <span data-icon="stop" data-icon-size="20"></span><span>End</span>
+        </button>
+        <button class="btn btn--primary btn--wide" id="breathe-toggle">
+          <span data-icon="play" data-icon-size="20"></span><span>Start</span>
+        </button>
+      </div>
+    </footer>
+  </section>
+
+  <!-- ══ DELAY ═════════════════════════════════════════════════════════ -->
+  <section class="view view--immersive" id="view-delay" aria-label="Urge delay">
+    <header class="session-bar">
+      <button class="icon-btn" data-go="home" aria-label="Back to home">
+        <span data-icon="back" data-icon-size="20"></span>
+      </button>
+      <p class="session-bar__title" id="delay-meta">Urge delay</p>
+      <span class="icon-btn is-ghost" aria-hidden="true"></span>
+    </header>
+
+    <div class="session-body" id="delay-mount"></div>
+
+    <p class="sr-only" id="delay-live" role="status" aria-live="polite"></p>
+
+    <div class="grounding" id="grounding" hidden>
+      <span class="grounding__icon" data-icon="leaf" data-icon-size="20"></span>
+      <div>
+        <p class="grounding__title" id="grounding-title"></p>
+        <p class="grounding__body" id="grounding-body"></p>
+      </div>
+      <button class="icon-btn" id="grounding-next" aria-label="Another suggestion">
+        <span data-icon="spark" data-icon-size="18"></span>
+      </button>
+    </div>
+
+    <footer class="session-foot">
+      <div class="chips" id="delay-chips" role="group" aria-label="Delay length">
+        <button class="chip" data-seconds="120">2 min</button>
+        <button class="chip is-active" data-seconds="300">5 min</button>
+        <button class="chip" data-seconds="600">10 min</button>
+        <button class="chip" data-seconds="900">15 min</button>
+      </div>
+      <div class="controls">
+        <button class="btn btn--ghost" id="delay-breathe" hidden>
+          <span data-icon="lungs" data-icon-size="20"></span><span>Breathe</span>
+        </button>
+        <button class="btn btn--primary btn--wide" id="delay-toggle">
+          <span data-icon="play" data-icon-size="20"></span><span>Start</span>
+        </button>
+      </div>
+      <button class="quiet-btn quiet-btn--center" id="delay-give" hidden>I'm going to smoke</button>
+    </footer>
+  </section>
+
+  <!-- ══ PROGRESS ══════════════════════════════════════════════════════ -->
+  <section class="view" id="view-progress" aria-label="Your progress">
+    <header class="topbar">
+      <button class="icon-btn" data-go="home" aria-label="Back to home">
+        <span data-icon="back" data-icon-size="20"></span>
+      </button>
+      <p class="topbar__title">Progress</p>
+      <span class="icon-btn is-ghost" aria-hidden="true"></span>
+    </header>
+
+    <div class="page">
+      <section class="summary" id="progress-summary"></section>
+      <section id="progress-triggers" hidden></section>
+      <h2 class="section-title">Recent</h2>
+      <div id="progress-list" class="timeline"></div>
+    </div>
+  </section>
+
+  <!-- ══ REWARDS ═══════════════════════════════════════════════════════ -->
+  <section class="view" id="view-rewards" aria-label="Tokens and rewards">
+    <header class="topbar">
+      <button class="icon-btn" data-go="home" aria-label="Back to home">
+        <span data-icon="back" data-icon-size="20"></span>
+      </button>
+      <p class="topbar__title">Tokens</p>
+      <button class="icon-btn" data-go="ledger" aria-label="Transaction history">
+        <span data-icon="clock" data-icon-size="20"></span>
+      </button>
+    </header>
+
+    <div class="page">
+      <section class="balance">
+        <p class="balance__count"><span id="bal-count">0</span> <span class="balance__unit">Tokens</span></p>
+        <p class="balance__rupees" id="bal-rupees">≈ ₹0</p>
+        <p class="balance__rate" id="bal-rate"></p>
+        <button class="btn btn--primary btn--wide" id="btn-redeem">Redeem rewards</button>
+        <p class="balance__hold" id="bal-hold" hidden></p>
+      </section>
+
+      <div class="ledger-stats">
+        <div class="lstat"><p class="lstat__v" id="bal-lifetime">0</p><p class="lstat__l">Lifetime earned</p></div>
+        <div class="lstat"><p class="lstat__v" id="bal-redeemed">0</p><p class="lstat__l">Redeemed</p></div>
+        <div class="lstat"><p class="lstat__v" id="bal-today">0</p><p class="lstat__l">Earned today</p></div>
+      </div>
+
+      <h2 class="section-title">Earn Tokens</h2>
+      <div class="earn-list" id="earn-list"></div>
+
+      <h2 class="section-title">Milestones</h2>
+      <div class="milestones" id="milestones"></div>
+
+      <h2 class="section-title">Redemptions</h2>
+      <div id="redemptions"></div>
+    </div>
+  </section>
+
+  <!-- ══ REWARDS · ledger ══════════════════════════════════════════════ -->
+  <section class="view" id="view-ledger" aria-label="Token transaction history">
+    <header class="topbar">
+      <button class="icon-btn" data-go="rewards" aria-label="Back to Tokens">
+        <span data-icon="back" data-icon-size="20"></span>
+      </button>
+      <p class="topbar__title">History</p>
+      <span class="icon-btn is-ghost" aria-hidden="true"></span>
+    </header>
+    <div class="page">
+      <p class="learn-lead">Every Token movement, oldest at the bottom. Nothing here is ever edited or removed.</p>
+      <div id="ledger-list" class="timeline"></div>
+    </div>
+  </section>
+
+  <!-- ══ SHEET · redeem ════════════════════════════════════════════════ -->
+  <div class="sheet" id="sheet-redeem" role="dialog" aria-labelledby="redeem-title" hidden>
+    <div class="sheet__panel">
+      <div class="sheet__grab" aria-hidden="true"></div>
+      <h2 class="sheet__title" id="redeem-title">Redeem Tokens</h2>
+      <p class="sheet__sub" id="redeem-sub"></p>
+
+      <div class="redeem-amounts" id="redeem-amounts" role="group" aria-label="Amount to redeem"></div>
+
+      <div class="notice notice--warn" id="redeem-notice">
+        <span data-icon="info" data-icon-size="18"></span>
+        <p>Gift cards aren't switched on yet. You can place a request and it will sit
+           as <strong>Requested</strong> until vouchers go live — nothing is sent and
+           no money moves.</p>
+      </div>
+
+      <div class="sheet__actions">
+        <button class="btn btn--ghost" data-close-sheet>Cancel</button>
+        <button class="btn btn--primary" id="redeem-confirm">Request</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SHEET · tutorial ══════════════════════════════════════════════ -->
+  <div class="sheet" id="sheet-tour" role="dialog" aria-labelledby="tour-title" hidden>
+    <div class="sheet__panel sheet__panel--center">
+      <div class="sheet__grab" aria-hidden="true"></div>
+
+      <div class="tour__art" id="tour-art" aria-hidden="true"></div>
+      <h2 class="sheet__title" id="tour-title"></h2>
+      <p class="sheet__sub" id="tour-body"></p>
+
+      <div class="tour__dots" id="tour-dots" aria-hidden="true"></div>
+
+      <div class="sheet__actions">
+        <button class="btn btn--ghost" id="tour-skip">Skip</button>
+        <button class="btn btn--primary" id="tour-next">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SHEET · reflection ════════════════════════════════════════════ -->
+  <div class="sheet" id="sheet-reflect" role="dialog" aria-labelledby="reflect-title" hidden>
+    <div class="sheet__panel">
+      <div class="sheet__grab" aria-hidden="true"></div>
+      <h2 class="sheet__title" id="reflect-title">Today's reflection</h2>
+      <p class="sheet__sub">One line, just for you. It stays on this device.</p>
+      <div class="field">
+        <label for="reflect-note">How did today go?</label>
+        <input id="reflect-note" type="text" maxlength="140" placeholder="Anything you noticed…">
+      </div>
+      <div class="sheet__actions">
+        <button class="btn btn--ghost" data-close-sheet>Cancel</button>
+        <button class="btn btn--primary" id="reflect-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ LEARN ═════════════════════════════════════════════════════════ -->
+  <section class="view" id="view-learn" aria-label="Learn about smoking">
+    <header class="topbar">
+      <button class="icon-btn" data-go="home" aria-label="Back to home">
+        <span data-icon="back" data-icon-size="20"></span>
+      </button>
+      <p class="topbar__title">Learn</p>
+      <span class="icon-btn is-ghost" aria-hidden="true"></span>
+    </header>
+
+    <div class="page">
+      <section class="hero hero--tight">
+        <h1 class="hero__title">Worth knowing.</h1>
+        <p class="hero__sub">Plain, sourced information about smoking. Read a card in half a minute, or go deeper.</p>
+      </section>
+
+      <div class="topics" id="topics"></div>
+
+      <p class="disclaimer">
+        No Malboros isn't a medical tool and doesn't diagnose anything. If you have symptoms
+        or questions about your health, speak to a doctor.
+      </p>
+    </div>
+  </section>
+
+  <!-- ══ LEARN · topic detail ══════════════════════════════════════════ -->
+  <section class="view" id="view-topic" aria-label="Topic">
+    <header class="topbar">
+      <button class="icon-btn" data-go="learn" aria-label="Back to Learn">
+        <span data-icon="back" data-icon-size="20"></span>
+      </button>
+      <p class="topbar__title" id="topic-title">Topic</p>
+      <span class="icon-btn is-ghost" aria-hidden="true"></span>
+    </header>
+    <div class="page" id="topic-body"></div>
+  </section>
+
+  <!-- ══ SETTINGS ══════════════════════════════════════════════════════ -->
+  <section class="view" id="view-settings" aria-label="Settings">
+    <header class="topbar">
+      <button class="icon-btn" data-go="home" aria-label="Back to home">
+        <span data-icon="back" data-icon-size="20"></span>
+      </button>
+      <p class="topbar__title">Settings</p>
+      <span class="icon-btn is-ghost" aria-hidden="true"></span>
+    </header>
+
+    <div class="page">
+      <h2 class="section-title">You</h2>
+      <div class="field">
+        <label for="set-name">Name <span class="field__opt">optional</span></label>
+        <input id="set-name" type="text" autocomplete="given-name" placeholder="What should we call you?">
+      </div>
+
+      <h2 class="section-title">Your pack</h2>
+      <p class="section-note">Only used to show what you haven't spent.</p>
+      <div class="field-row">
+        <div class="field">
+          <label for="set-price">Pack price (₹)</label>
+          <input id="set-price" type="number" inputmode="numeric" min="1" step="1">
+        </div>
+        <div class="field">
+          <label for="set-count">Per pack</label>
+          <input id="set-count" type="number" inputmode="numeric" min="1" max="100" step="1">
+        </div>
+      </div>
+
+      <h2 class="section-title">Daily limit</h2>
+      <div class="field">
+        <label for="set-limit">Cigarettes a day you're aiming for</label>
+        <input id="set-limit" type="number" inputmode="numeric" min="0" max="60" step="1">
+      </div>
+
+      <h2 class="section-title">Breathing</h2>
+      <div class="field">
+        <label for="set-breath">Seconds per side</label>
+        <div class="chips" id="breath-chips" role="group" aria-label="Seconds per side">
+          <button class="chip" data-breath="3">3s</button>
+          <button class="chip is-active" data-breath="4">4s</button>
+          <button class="chip" data-breath="5">5s</button>
+          <button class="chip" data-breath="6">6s</button>
+        </div>
+      </div>
+
+      <h2 class="section-title">Feedback</h2>
+      <label class="toggle">
+        <input type="checkbox" id="set-haptics">
+        <span class="toggle__track"><span class="toggle__thumb"></span></span>
+        <span class="toggle__label">Vibrate on each phase <span class="field__opt">mobile</span></span>
+      </label>
+
+      <h2 class="section-title">Help</h2>
+      <button class="btn btn--ghost btn--wide" id="btn-show-tour">
+        <span data-icon="info" data-icon-size="18"></span>
+        <span>How this app works</span>
+      </button>
+
+      <h2 class="section-title">Data</h2>
+      <p class="section-note">Everything stays in this browser. Nothing is uploaded.</p>
+      <button class="btn btn--danger-quiet" id="btn-reset">Erase all my data</button>
+    </div>
+  </section>
+
+  <!-- ══ SHEET · log a cigarette ═══════════════════════════════════════ -->
+  <div class="sheet" id="sheet-log" role="dialog" aria-labelledby="sheet-log-title" hidden>
+    <div class="sheet__panel">
+      <div class="sheet__grab" aria-hidden="true"></div>
+      <h2 class="sheet__title" id="sheet-log-title">No judgement.</h2>
+      <p class="sheet__sub">Logging it just helps you spot the pattern later.</p>
+
+      <p class="field__legend" id="trigger-legend">What was going on?</p>
+      <div class="chips chips--wrap" id="trigger-chips" role="group" aria-labelledby="trigger-legend">
+        <button class="chip is-active" data-trigger="Stress">Stress</button>
+        <button class="chip" data-trigger="Habit">Habit</button>
+        <button class="chip" data-trigger="Social">With people</button>
+        <button class="chip" data-trigger="Boredom">Boredom</button>
+        <button class="chip" data-trigger="After a meal">After a meal</button>
+        <button class="chip" data-trigger="Coffee or drink">Coffee / drink</button>
+      </div>
+
+      <div class="sheet__actions">
+        <button class="btn btn--ghost" data-close-sheet>Cancel</button>
+        <button class="btn btn--primary" id="log-confirm">Log it</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SHEET · session complete ══════════════════════════════════════ -->
+  <div class="sheet" id="sheet-done" role="dialog" aria-labelledby="done-title" hidden>
+    <div class="sheet__panel sheet__panel--center">
+      <div class="done-bloom" aria-hidden="true"><span data-icon="check" data-icon-size="30"></span></div>
+      <h2 class="sheet__title" id="done-title">You got through it.</h2>
+      <p class="sheet__sub" id="done-sub"></p>
+      <div class="sheet__actions sheet__actions--stack">
+        <button class="btn btn--primary btn--wide" id="done-close">Done</button>
+        <button class="btn btn--ghost btn--wide" id="done-again">Go again</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+
+</html>
