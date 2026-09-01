@@ -111,6 +111,32 @@ button { background: none; border: none; cursor: pointer; }
   .tour__art--delay { background: rgba(2, 132, 199, 0.10); color: #0284C7; }
 }
 
+.tour__fields { margin-top: var(--s5); text-align: left; }
+
+/* Removing a log is available but never prominent — it should feel like a
+   correction, not an escape hatch that invites under-reporting. */
+.entry__remove {
+  flex: none;
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
+  border-radius: 8px;
+  color: var(--ink-3);
+  opacity: 0;
+  transition: opacity var(--fast) var(--ease),
+              color var(--fast) var(--ease),
+              background-color var(--fast) var(--ease),
+              transform var(--fast) var(--ease);
+}
+.entry:hover .entry__remove,
+.entry__remove:focus-visible { opacity: 1; }
+.entry__remove:hover { color: var(--danger); background: rgba(248, 113, 113, 0.10); }
+.entry__remove:active { transform: scale(0.9); }
+
+/* Touch has no hover, so the control has to be permanently visible there. */
+@media (hover: none) {
+  .entry__remove { opacity: 0.55; }
+}
+
 .tour__dots {
   display: flex; justify-content: center; gap: var(--s2);
   margin-top: var(--s5);
@@ -368,6 +394,8 @@ button { background: none; border: none; cursor: pointer; }
   color: var(--danger);
   border: 1px solid var(--hairline);
   width: 100%;
+  /* Set apart from the backup controls above — this one is irreversible. */
+  margin-top: var(--s5);
 }
 .btn--danger-quiet:hover { background: rgba(248, 113, 113, 0.08); }
 

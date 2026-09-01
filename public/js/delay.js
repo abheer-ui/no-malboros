@@ -132,8 +132,20 @@ export function createDelay({ mount, onTick, onComplete }) {
     mount.classList.remove('is-running');
   }
 
+  /**
+   * Force a recompute after the tab was hidden. requestAnimationFrame stops
+   * firing in a backgrounded tab, so time passes without the ring or the
+   * countdown moving — and a delay that finished while the phone was locked
+   * has to be honoured the moment you look again, not restarted.
+   */
+  function sync() {
+    if (!running) return;
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(paint);
+  }
+
   return {
-    start, pause, resume, stop,
+    start, pause, resume, stop, sync,
     get running() { return running; },
     get remaining() { return remaining; },
     get total() { return total; },

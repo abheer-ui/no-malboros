@@ -16,5 +16,21 @@
       "sizes": "any",
       "purpose": "any"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Delay an urge",
+      "short_name": "Delay",
+      "description": "Start a timer and ride the craving out",
+      "url": "/?go=delay",
+      "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Breathe",
+      "short_name": "Breathe",
+      "description": "Start box breathing",
+      "url": "/?go=breathe",
+      "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    }
   ]
 }

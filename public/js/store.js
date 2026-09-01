@@ -17,6 +17,7 @@ const DEFAULTS = {
   delaySeconds: 300,   // 5 minutes
   sound: false,
   haptics: true,
+  notify: false,
   onboarded: false,
   smokes: [],   // { id, at, trigger, note }
   urges: [],    // { id, at, seconds, outcome: 'rode'|'smoked'|'stopped' }
@@ -110,8 +111,21 @@ function push(key, entry) {
 
 /* ---- Actions ------------------------------------------------------------ */
 
+/**
+ * Nicotine and cost are snapshotted onto the entry at log time, never derived
+ * later from current settings. If they were derived, changing your pack price
+ * in Settings would silently rewrite what every past cigarette "cost" — the
+ * history has to stay a record of what was true when it happened.
+ */
 export const logSmoke = (trigger = 'Other', note = '') =>
-  push('smokes', { id: uid(), at: new Date().toISOString(), trigger, note });
+  push('smokes', {
+    id: uid(),
+    at: new Date().toISOString(),
+    trigger,
+    note,
+    nicotineMg: Number(state.nicotineMg) || 0,
+    costMinor: Math.round(costPerCigarette() * 100),
+  });
 
 export const logUrge = (seconds, outcome) =>
   push('urges', { id: uid(), at: new Date().toISOString(), seconds, outcome });
@@ -210,3 +224,64 @@ export function streak() {
 export const totalRode = () => state.urges.filter((u) => u.outcome === 'rode').length;
 export const totalBreathMinutes = () =>
   Math.round(state.breaths.reduce((a, b) => a + (b.seconds || 0), 0) / 60);
+
+/**
+ * Estimated nicotine from today's logs, in mg. Entries logged before this was
+ * tracked have no figure of their own and fall back to the current setting —
+ * `estimated` says how many did, so the UI can be honest about it.
+ */
+export function todayNicotine() {
+  const logs = todaySmokes();
+  let mg = 0, estimated = 0;
+  logs.forEach((s) => {
+    if (typeof s.nicotineMg === 'number') mg += s.nicotineMg;
+    else { mg += Number(state.nicotineMg) || 0; estimated++; }
+  });
+  return { mg: Math.round(mg * 10) / 10, estimated, total: logs.length };
+}
+
+/** What today's cigarettes actually cost, using each entry's own snapshot. */
+export const todaySpend = () =>
+  todaySmokes().reduce(
+    (a, s) => a + (typeof s.costMinor === 'number' ? s.costMinor / 100 : costPerCigarette()),
+    0
+  );
+
+/* ---- Portability --------------------------------------------------------
+   Local-first means the data is yours, so it has to be possible to take it
+   with you. This is the counterpart to "erase everything".                 */
+
+export const EXPORT_VERSION = 2;
+
+export function exportData() {
+  return JSON.stringify({ app: 'no-malboros', version: EXPORT_VERSION, exportedAt: new Date().toISOString(), state }, null, 2);
+}
+
+/**
+ * Replace everything with a previously exported file. Validates before it
+ * touches anything, so a wrong file can never leave you with half a state.
+ */
+export function importData(json) {
+  let parsed;
+  try { parsed = JSON.parse(json); }
+  catch { return { error: "That file isn't readable. Make sure it's the JSON file No Malboros exported." }; }
+
+  const incoming = parsed?.state ?? parsed;
+  if (!incoming || typeof incoming !== 'object') return { error: "That file doesn't look like a No Malboros backup." };
+  const arrays = ['smokes', 'urges', 'breaths'];
+  if (!arrays.some((k) => Array.isArray(incoming[k]))) {
+    return { error: "That file doesn't contain any No Malboros history." };
+  }
+
+  const clean = { ...DEFAULTS };
+  Object.keys(DEFAULTS).forEach((k) => {
+    if (incoming[k] !== undefined && typeof incoming[k] === typeof DEFAULTS[k]) clean[k] = incoming[k];
+  });
+
+  state = { ...clean, onboarded: true };
+  persist(); emit();
+  return {
+    ok: true,
+    counts: { smokes: state.smokes.length, urges: state.urges.length, breaths: state.breaths.length },
+  };
+}

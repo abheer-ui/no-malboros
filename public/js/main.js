@@ -127,6 +127,25 @@ function renderHome() {
   $('#home-note').textContent = homeNote();
 }
 
+/**
+ * The one notification this app sends: your delay finished while you were
+ * looking elsewhere. Nothing scheduled, nothing promotional, nothing that
+ * nags you back into the app.
+ */
+function notifyDelayDone(seconds) {
+  if (!store.get().notify) return;
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  if (!document.hidden) return;              // you're here — the sheet is enough
+  try {
+    new Notification('You got through it.', {
+      body: `${Math.round(seconds / 60)} minutes, and the urge passed.`,
+      icon: '/icon.svg',
+      badge: '/icon.svg',
+      tag: 'nm-delay-done',                  // never stacks up
+    });
+  } catch (_) { /* some browsers require a service-worker registration */ }
+}
+
 /* ══ Tokens ══════════════════════════════════════════════════════════════ */
 
 /**
@@ -543,6 +562,7 @@ function prepareDelay() {
         const entry = store.logUrge(seconds, 'rode');
         setDelayRunning(false);
         tokenToast(afterSession('delay', entry, { seconds }));
+        notifyDelayDone(seconds);
         const mins = Math.round(seconds / 60);
         showDone({
           title: 'You got through it.',
@@ -741,6 +761,9 @@ function renderProgress() {
     })),
     ...s.smokes.map((k) => ({
       at: k.at, kind: 'smoke', title: 'Smoked one', meta: k.trigger, icon: 'cigarette',
+      // Only cigarette entries are removable — a mis-tap shouldn't be permanent,
+      // and making it easy to correct is what keeps the logging honest.
+      removeId: k.id,
     })),
   ].sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 40);
 
@@ -761,8 +784,23 @@ function renderProgress() {
         <p class="entry__title">${it.title}</p>
         <p class="entry__meta">${it.meta} · ${relativeTime(it.at)}</p>
       </div>
+      ${it.removeId
+        ? `<button class="entry__remove" data-remove-smoke="${it.removeId}"
+             aria-label="Remove this cigarette entry">${icon('trash', 16)}</button>`
+        : ''}
     </div>`).join('');
 }
+
+// Undo a mis-logged cigarette. Confirmed, because it changes your history.
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-remove-smoke]');
+  if (!btn) return;
+  if (!confirm('Remove this cigarette from your history?')) return;
+  store.removeSmoke(btn.dataset.removeSmoke);
+  haptic(10);
+  renderProgress();
+  toast('Entry removed.', 'info');
+});
 
 /* ══ Settings ════════════════════════════════════════════════════════════ */
 
@@ -773,6 +811,7 @@ function fillSettings() {
   $('#set-count').value = s.packCount;
   $('#set-limit').value = s.dailyLimit;
   $('#set-haptics').checked = !!s.haptics;
+  $('#set-notify').checked = !!s.notify && (window.Notification?.permission === 'granted');
   $$('.chip', $('#breath-chips')).forEach((c) =>
     c.classList.toggle('is-active', Number(c.dataset.breath) === s.breathSeconds));
 }
@@ -803,6 +842,61 @@ $('#breath-chips').addEventListener('click', (e) => {
   haptic(6);
 });
 
+/* ---- Backup & restore --------------------------------------------------- */
+
+$('#btn-export').addEventListener('click', () => {
+  const blob = new Blob([store.exportData()], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `no-malboros-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  haptic(10);
+  toast('Backup saved. Keep it somewhere safe.', 'success');
+});
+
+$('#btn-import').addEventListener('click', () => $('#import-file').click());
+
+$('#import-file').addEventListener('change', async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  e.target.value = '';                       // so re-picking the same file works
+
+  const text = await file.text();
+  // Restoring replaces everything, so it has to be a deliberate choice.
+  if (!confirm('Restoring replaces everything currently in this browser. Continue?')) return;
+
+  const res = store.importData(text);
+  if (res.error) { toast(res.error, 'error', 5000); return; }
+
+  const { smokes, urges, breaths } = res.counts;
+  fillSettings();
+  renderHome();
+  toast(`Restored ${smokes} logs, ${urges} urges, ${breaths} breathing sessions.`, 'success', 4500);
+});
+
+/* ---- Notifications ------------------------------------------------------ */
+
+$('#set-notify').addEventListener('change', async (e) => {
+  if (!e.target.checked) { store.update({ notify: false }); return; }
+
+  if (!('Notification' in window)) {
+    e.target.checked = false;
+    toast("This browser can't show notifications.", 'error');
+    return;
+  }
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') {
+    e.target.checked = false;
+    toast('Notifications are blocked for this site in your browser settings.', 'info', 4500);
+    return;
+  }
+  store.update({ notify: true });
+  haptic(12);
+  toast('You\'ll get one message when a delay finishes.', 'success');
+});
+
 $('#btn-reset').addEventListener('click', () => {
   if (!confirm('Erase everything stored in this browser? This cannot be undone.')) return;
   store.resetAll();
@@ -828,6 +922,14 @@ const TOUR = [
     title: 'Delay an urge',
     body: 'Start a timer and wait it out. Cravings rise and pass, usually within minutes. Stop whenever you like — the time you did wait still counts.',
   },
+  {
+    // Without these two numbers "Not spent" reads ₹0 and looks broken, and
+    // nobody goes hunting in Settings for them. Optional, and skippable.
+    icon: 'cigarette', tone: '',
+    title: 'Your pack',
+    body: 'Optional — only used to show what you haven\'t spent. You can change it later in Settings.',
+    fields: true,
+  },
 ];
 
 let tourStep = 0;
@@ -842,6 +944,21 @@ function renderTour() {
     .map((_, i) => `<span class="tour__dot ${i === tourStep ? 'is-on' : ''}"></span>`).join('');
   $('#tour-next').textContent = tourStep === TOUR.length - 1 ? "Let's go" : 'Next';
   $('#tour-skip').textContent = tourStep === 0 ? 'Skip' : 'Back';
+
+  const st = store.get();
+  $('#tour-fields').hidden = !s.fields;
+  if (s.fields) {
+    $('#tour-price').value = st.packPrice;
+    $('#tour-count').value = st.packCount;
+  }
+}
+
+/** Save the pack card's values, if the user filled it in. */
+function saveTourFields() {
+  if (!TOUR[tourStep]?.fields) return;
+  const price = Math.max(1, Number($('#tour-price').value) || 0);
+  const count = Math.min(100, Math.max(1, Number($('#tour-count').value) || 0));
+  if (price && count) store.update({ packPrice: price, packCount: count });
 }
 
 function openTour() {
@@ -857,8 +974,9 @@ function finishTour() {
 
 $('#tour-next').addEventListener('click', () => {
   haptic(6);
+  saveTourFields();
   if (tourStep < TOUR.length - 1) { tourStep++; renderTour(); }
-  else finishTour();
+  else { finishTour(); renderHome(); }
 });
 
 // Doubles as Back once you're past the first card, so nothing is a dead end.
@@ -897,13 +1015,38 @@ renderHome();
   setTimeout(dismiss, reduceMotion() ? 0 : 1250);
 })();
 
+// Home-screen shortcuts land here: ?go=delay / ?go=breathe. Long-pressing the
+// app icon should drop you straight into a session, not the home screen.
+(function handleShortcut() {
+  const target = new URLSearchParams(location.search).get('go');
+  if (target !== 'delay' && target !== 'breathe') return;
+  history.replaceState(null, '', location.pathname);   // don't re-fire on reload
+  setTimeout(() => {
+    go(target);
+    setTimeout(() => (target === 'delay' ? startDelay() : startBreathe()), 300);
+  }, reduceMotion() ? 0 : 1400);
+})();
+
+// Offline support. Registered late so it never competes with first paint.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => { /* fine without it */ });
+  });
+}
+
 // Keep "time since" honest without burning a timer on every frame.
 setInterval(() => { if (current === 'home') renderSince(); }, 30000);
 
 // Never leave a timer running in a hidden tab.
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
+    // Breathing needs you watching — pause it, there is nothing to follow.
     if (breather?.running) { breather.pause(); setBreatheRunning(false); }
-    if (delay?.running) { delay.pause(); setDelayRunning(false); }
+    // An urge delay is the opposite: the instruction is literally "put the
+    // phone down and wait." Pausing it when the screen locks would defeat the
+    // feature. It runs off a wall clock, so it keeps counting while hidden and
+    // reconciles on return.
+  } else if (delay?.running) {
+    delay.sync();
   }
 });

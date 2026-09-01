@@ -299,6 +299,17 @@
       <h2 class="sheet__title" id="tour-title"></h2>
       <p class="sheet__sub" id="tour-body"></p>
 
+      <div class="field-row tour__fields" id="tour-fields" hidden>
+        <div class="field">
+          <label for="tour-price">Pack price (₹)</label>
+          <input id="tour-price" type="number" inputmode="numeric" min="1" step="1">
+        </div>
+        <div class="field">
+          <label for="tour-count">Per pack</label>
+          <input id="tour-count" type="number" inputmode="numeric" min="1" max="100" step="1">
+        </div>
+      </div>
+
       <div class="tour__dots" id="tour-dots" aria-hidden="true"></div>
 
       <div class="sheet__actions">
@@ -422,8 +433,29 @@
         <span>How this app works</span>
       </button>
 
+      <h2 class="section-title">Notifications</h2>
+      <p class="section-note">One message, when a delay finishes. Nothing else, ever.</p>
+      <label class="toggle">
+        <input type="checkbox" id="set-notify">
+        <span class="toggle__track"><span class="toggle__thumb"></span></span>
+        <span class="toggle__label">Tell me when an urge delay is up</span>
+      </label>
+
       <h2 class="section-title">Data</h2>
-      <p class="section-note">Everything stays in this browser. Nothing is uploaded.</p>
+      <p class="section-note">
+        Everything stays in this browser — nothing is uploaded, and nobody else can see it.
+        That also means clearing your browser erases it, so keep a backup.
+      </p>
+      <div class="field-row">
+        <button class="btn btn--ghost" id="btn-export">
+          <span data-icon="external" data-icon-size="18"></span><span>Export backup</span>
+        </button>
+        <button class="btn btn--ghost" id="btn-import">
+          <span data-icon="plus" data-icon-size="18"></span><span>Restore</span>
+        </button>
+      </div>
+      <input type="file" id="import-file" accept="application/json,.json" hidden>
+
       <button class="btn btn--danger-quiet" id="btn-reset">Erase all my data</button>
     </div>
   </section>
